@@ -1,0 +1,4 @@
+# minify script before upload
+python-minifier==2.9.0
+# upload code to microbit
+microfs==1.4.5
