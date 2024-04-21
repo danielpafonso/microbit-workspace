@@ -8,23 +8,24 @@ from datetime import datetime
 import microfs
 import python_minifier as minifier
 
-
 MAIN = ""
 ADDONS = []
 TMP = f"tmp_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
 
 def create_tmp() -> None:
     """Create temporary folder"""
     os.makedirs(TMP)
 
+
 def remove_tmp() -> None:
     """Delete temporary files and folder"""
     # delete files
-    os.remove(os.path.join(TMP, MAIN))
-    for filename in ADDONS:
+    for filename in os.listdir(TMP):
         os.remove(os.path.join(TMP, filename))
     # delete folder
     os.removedirs(TMP)
+
 
 def minify_to_tmp(filename: str) -> str:
     """Read file, minify its and write file in tmp folder with same name.
@@ -46,12 +47,14 @@ def minify_to_tmp(filename: str) -> str:
 
     return minified_path
 
+
 def clear_microbit() -> None:
     """Clear files from micro:bit file system"""
     print("Cleaning micro:bit file system")
     files = microfs.ls()
     for fname in files:
         microfs.rm(fname)
+
 
 def flash() -> None:
     """Flash files to micro:bit, setting MAIN as startup script"""
@@ -62,22 +65,38 @@ def flash() -> None:
         print("Copying additional scripts")
         for name in ADDONS:
             print(" ", name)
-            mini_path = minify_to_tmp(name)
-            microfs.put(mini_path)
+            if ARGS.no_minify:
+                microfs.put(name)
+            else:
+                mini_path = minify_to_tmp(name)
+                microfs.put(mini_path)
 
     print("Copying main script: ", MAIN)
     # Rename script to main.py setting it as startup script
-    mini_path = minify_to_tmp(MAIN)
-    microfs.put(mini_path, "main.py")
+    if ARGS.no_minify:
+        microfs.put(MAIN, "main.py")
+    else:
+        mini_path = minify_to_tmp(MAIN)
+        microfs.put(mini_path, "main.py")
 
     # remove tmp folder
     remove_tmp()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Flash main and additional python scripts to micro:bit")
-    parser.add_argument("-c", "--clear", action="store_true",
-        help="Remove files from microbot before flashing")
+    parser.add_argument(
+        "-c",
+        "--clear",
+        action="store_true",
+        help="Remove files from microbot before flashing"
+    )
+    parser.add_argument(
+        "--no-minify",
+        action="store_true",
+        help="Don't minify files before upload them to micro:bit"
+    )
     ARGS = parser.parse_args()
 
     if ARGS.clear:
